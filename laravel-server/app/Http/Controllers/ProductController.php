@@ -5,12 +5,25 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreProductRequest;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        return response()->json(Product::latest()->get(), 200);
+        $query = Product::query();
+
+        if ($request->filled('search')) {
+            $searchTerm = $request->string('search')->toString();
+            $query->where(function ($query) use ($searchTerm) {
+                $query->where('name', 'like', "%{$searchTerm}%")
+                    ->orWhere('manufacturer', 'like', "%{$searchTerm}%")
+                    ->orWhere('code', 'like', "%{$searchTerm}%")
+                    ->orWhere('description', 'like', "%{$searchTerm}%");
+            });
+        }
+
+        return response()->json($query->latest()->paginate(12), 200);
     }
 
     public function store(StoreProductRequest $request): JsonResponse
